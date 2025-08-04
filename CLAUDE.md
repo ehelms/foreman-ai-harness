@@ -4,6 +4,4 @@ This file imports context for all Foreman-related projects including Foreman cor
 
 ## Project Context Imports
 @~/.claude/theforeman/foreman/CLAUDE.md
-# Add other foreman ecosystem project contexts here as needed
-# @~/.claude/theforeman/katello/CLAUDE.md
-# @~/.claude/theforeman/hammer-cli/CLAUDE.md
+@~/.claude/theforeman/katello/CLAUDE.md
