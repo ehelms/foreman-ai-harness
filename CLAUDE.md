@@ -5,3 +5,5 @@ This file imports context for all Foreman-related projects including Foreman cor
 ## Project Context Imports
 @~/.claude/theforeman/foreman/CLAUDE.md
 @~/.claude/theforeman/katello/CLAUDE.md
+@~/.claude/theforeman/hammer-cli/CLAUDE.md
+@~/.claude/theforeman/foreman_remote_execution/CLAUDE.md
