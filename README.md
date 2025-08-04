@@ -6,7 +6,7 @@ This repository provides Claude Code context for the Foreman ecosystem, includin
 
 1. Clone this repository to your Claude context directory:
    ```bash
-   git clone <repository-url> ~/.claude/theforeman
+   git clone https://github.com/ehelms/foreman-context.git ~/.claude/theforeman
    ```
 
 2. Add the import to your main `~/.claude/CLAUDE.md` file:
