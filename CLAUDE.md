@@ -7,3 +7,4 @@ This file imports context for all Foreman-related projects including Foreman cor
 @~/.claude/theforeman/katello/CLAUDE.md
 @~/.claude/theforeman/hammer-cli/CLAUDE.md
 @~/.claude/theforeman/foreman_remote_execution/CLAUDE.md
+@~/.claude/theforeman/puppet-iop/CLAUDE.md
