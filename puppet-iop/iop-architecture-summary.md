@@ -100,15 +100,18 @@ IOP is a containerized microservices architecture for comprehensive infrastructu
 
 ### Smart Proxy Registration (One-time Setup)
 - IOP registers as Smart Proxy with Foreman at `https://localhost:24443`
-- **OAuth credentials**: Used only during initial registration, then discarded
-- **Post-registration**: All communication uses SSL client certificates (mutual TLS)
-- Gateway acts as unified interface to Foreman
+- **Follows standard puppet-foreman_proxy registration pattern**:
+  - **OAuth credentials**: Used only during initial registration via foreman_smartproxy resource
+  - **Post-registration**: All communication uses SSL client certificates (mutual TLS)
+  - **Standard smart-proxy protocol**: Same registration flow as traditional smart-proxy deployments
+- Gateway acts as unified interface to Foreman, presenting standard smart-proxy API
 
 ### Ongoing Communication Flow
 - **Primary authentication**: SSL client certificates (mutual TLS)
-- **No OAuth storage**: OAuth credentials not maintained after registration
+- **No OAuth storage**: OAuth credentials not maintained after registration (standard pattern)
 - **Standard Smart Proxy protocol**: Foreman treats IOP as regular Smart Proxy
 - **Certificate-based**: All operational communication uses SSL cert hierarchy
+- **Gateway facade**: Nginx gateway implements standard smart-proxy API endpoints, routing to internal microservices
 
 ### Data Exchange Points
 - **Host Inventory**: REST API via port 8081
