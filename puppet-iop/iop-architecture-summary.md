@@ -98,10 +98,17 @@ IOP is a containerized microservices architecture for comprehensive infrastructu
 
 ## Communication Architecture
 
-### Smart Proxy Registration
+### Smart Proxy Registration (One-time Setup)
 - IOP registers as Smart Proxy with Foreman at `https://localhost:24443`
-- OAuth + SSL certificates for secure communication
-- Gateway acts as unified interface
+- **OAuth credentials**: Used only during initial registration, then discarded
+- **Post-registration**: All communication uses SSL client certificates (mutual TLS)
+- Gateway acts as unified interface to Foreman
+
+### Ongoing Communication Flow
+- **Primary authentication**: SSL client certificates (mutual TLS)
+- **No OAuth storage**: OAuth credentials not maintained after registration
+- **Standard Smart Proxy protocol**: Foreman treats IOP as regular Smart Proxy
+- **Certificate-based**: All operational communication uses SSL cert hierarchy
 
 ### Data Exchange Points
 - **Host Inventory**: REST API via port 8081
@@ -195,10 +202,17 @@ IOP is a containerized microservices architecture for comprehensive infrastructu
 DATA FLOW:
 ══════════
 
-Foreman ══► IOP Gateway ══► Internal Services
-   │                              ▲
-   │                              │
-   └── OAuth/Smart Proxy ─────────┘
+Registration Phase (One-time):
+Foreman ══► OAuth (temporary) ══► IOP Gateway
+   │                                    ▲
+   │                                    │
+   └── Smart Proxy Registration ────────┘
+
+Operational Phase (Ongoing):
+Foreman ══► SSL Client Certs ══► IOP Gateway ══► Internal Services
+   │                                        ▲
+   │                                        │
+   └── Standard Smart Proxy Protocol ──────┘
 
 VMAAS ══► Katello URL: http://iop-core-gateway:9090
          (Repository data sync)
