@@ -72,17 +72,21 @@ IOP is a containerized microservices architecture for comprehensive infrastructu
   - Fix tracking and execution history
 
 ### Database Features
-- **Foreign Data Wrappers (FDW)**: Cross-service data sharing
+- **Foreign Data Wrappers (FDW)**: Cross-service data sharing via `postgres_fdw` extension
 - **Persistent storage**: All databases use persistent volumes
 - **Schema management**: Migration containers handle upgrades
 - **Integration**: PostgreSQL-backed with containerized deployment
+- **FDW Implementation**: Automated foreign server creation, user mappings, and view definitions
+- **Cross-database access**: Remote `inventory.hosts` table accessible through local schemas
 
 ## Security & Integration
 
 ### Certificate Management
-- Integration with puppet-certs module (≥21.0.0)
-- Separate client/server certificate hierarchies
-- Secrets management through Podman secrets
+- **Integration with puppet-certs module** (≥21.0.0) via `certs::iop` class
+- **Separate client/server certificate hierarchies** for gateway authentication
+- **Secrets management** through Podman secrets with proper file modes (0440)
+- **Certificate mounting**: Server certs for SSL termination, client certs for smart-proxy relay
+- **Ownership management**: All certificates owned by nginx user (uid=998, gid=998)
 
 ### Foreman Integration
 - **Smart Proxy registration** (`register_as_smartproxy`)
@@ -91,10 +95,12 @@ IOP is a containerized microservices architecture for comprehensive infrastructu
 - **REST API integration** for host data
 
 ## Container Orchestration
-- **Podman Quadlet**: Systemd-native container management
-- **Service dependencies** and ordering
-- **Volume and secret mounting**
-- **Container images**: All use quay.io/iop/* with latest tags
+- **Podman Quadlet**: Systemd-native container management via puppet-podman module
+- **Service dependencies** and ordering through systemd units
+- **Volume and secret mounting** with proper file permissions and ownership
+- **Container images**: All use quay.io/iop/* registry (configurable versions)
+- **Network isolation**: Services communicate via `iop-core-network` bridge network
+- **Port publishing**: Gateway exposed on 127.0.0.1:24443 (external) and port 9090 (internal)
 
 ## Communication Architecture
 
@@ -229,6 +235,36 @@ VMAAS ══► Katello URL: http://iop-core-gateway:9090
 - **Kafka Topics**: Event-driven communication for real-time data processing
 - **Container Network**: `iop-core-network` provides service isolation and discovery
 
+## Puppet Module Implementation
+
+### Module Structure (`theforeman-iop`)
+The IOP deployment is managed by the `puppet-iop` module which provides:
+
+#### Core Components
+- **`iop::init`**: Main class orchestrating all IOP services with database configuration
+- **`iop::core_*`**: Core infrastructure services (network, kafka, gateway, etc.)
+- **`iop::service_*`**: Optional service layers (vulnerability, advisor, remediations)
+- **`iop::postgresql_fdw`**: Automated Foreign Data Wrapper configuration
+
+#### Key Implementation Features
+- **Modular service deployment**: Each service can be enabled/disabled independently
+- **Database abstraction**: Unified database configuration across all services
+- **Secret management**: Automated generation and secure storage of credentials
+- **Smart proxy integration**: Built-in `foreman_smartproxy` resource for registration
+- **Certificate integration**: Seamless integration with `puppet-certs` module
+
+#### Configuration Parameters
+- **Database settings**: Centralized database host, port, and credentials for all services
+- **Service toggles**: Individual `ensure` parameters for each component
+- **Smart proxy options**: Configurable Foreman base URL and registration settings
+- **Container images**: Configurable container registry and image versions
+
+#### Dependencies
+- **puppet-podman**: Container orchestration via Podman Quadlet
+- **puppet-certs**: SSL certificate management for IOP services
+- **puppet-postgresql**: Database server and Foreign Data Wrapper setup
+- **extlib**: Random password generation and data caching
+
 ## Key Features
 - **Event-driven communication** via Kafka topics
 - **Service isolation** through container networking
@@ -236,3 +272,4 @@ VMAAS ══► Katello URL: http://iop-core-gateway:9090
 - **Seamless Foreman/Satellite integration**
 - **Comprehensive security** with mutual TLS and OAuth
 - **Cross-database queries** via FDW for data consistency
+- **Declarative deployment** via Puppet manifests with idempotent configuration
