@@ -161,169 +161,226 @@ The following sequence diagram illustrates the complete flow of API calls during
 ```mermaid
 sequenceDiagram
     participant Host as Host System
-    participant Foreman as Foreman Server
+    participant Apache as Apache/HTTP Server
+    participant Foreman as Foreman Rails App
     participant Candlepin as Candlepin
     participant Pulp as Pulp
     participant RHCloud as Red Hat Cloud
     participant Browser as Admin Browser
 
     Note over Host,RHCloud: Phase 1: Registration Script Download
-    Host->>Foreman: GET /register?activation_keys=rhel9&...
+    Host->>Apache: GET /register?activation_keys=rhel9&... (HTTP/2.0)
+    Apache->>Foreman: Forward to Rails app
     Note right of Foreman: 103ms - Generate registration script
-    Foreman-->>Host: Registration script
+    Foreman-->>Apache: Registration script (14833 bytes)
+    Apache-->>Host: HTTP 200 - Registration script
 
     Note over Host,RHCloud: Phase 2: Subscription Manager Registration
-    Host->>Foreman: GET /rhsm/
+    Host->>Apache: GET /rhsm/ (HTTP/1.1)
+    Apache->>Foreman: Forward RHSM request
     Foreman->>Candlepin: Forward request
     Candlepin-->>Foreman: RHSM resource list
-    Foreman-->>Host: RHSM endpoints
+    Foreman-->>Apache: RHSM endpoints (2344 bytes)
+    Apache-->>Host: HTTP 200 - RHSM endpoints
 
-    Host->>Foreman: POST /rhsm/consumers?owner=Default_Organization&activation_keys=rhel9
+    Host->>Apache: POST /rhsm/consumers?owner=Default_Organization&activation_keys=rhel9 (HTTP/1.1)
+    Apache->>Foreman: Forward consumer creation request
     Note right of Foreman: 3,256ms - LONGEST OPERATION
     Foreman->>Candlepin: Create consumer
     Foreman->>Pulp: GET /pulp/api/v3/status/ (2x)
     Foreman->>Foreman: Create host record & facets
     Foreman->>Foreman: Import facts (193 facts)
     Candlepin-->>Foreman: Consumer created
-    Foreman-->>Host: Consumer details + certificates
+    Foreman-->>Apache: Consumer details + certificates (16131 bytes)
+    Apache-->>Host: HTTP 200 - Consumer details
 
     loop Status and Certificate Checks
-        Host->>Foreman: GET /rhsm/status
+        Host->>Apache: GET /rhsm/status (HTTP/1.1)
+        Apache->>Foreman: Forward status request
         Foreman->>Candlepin: Forward request
         Candlepin-->>Foreman: Status
-        Foreman-->>Host: Status (12 total calls)
+        Foreman-->>Apache: Status (669 bytes)
+        Apache-->>Host: HTTP 200 - Status (12 total calls)
 
-        Host->>Foreman: GET /rhsm/consumers/{uuid}/certificates/serials
+        Host->>Apache: GET /rhsm/consumers/{uuid}/certificates/serials (HTTP/1.1)
+        Apache->>Foreman: Forward certificate request
         Foreman->>Candlepin: Forward request
         Candlepin-->>Foreman: Certificate serials
-        Foreman-->>Host: Serials (6 total calls)
+        Foreman-->>Apache: Serials (105 bytes)
+        Apache-->>Host: HTTP 200 - Serials (6 total calls)
     end
 
-    Host->>Foreman: GET /rhsm/consumers/{uuid}/certificates?serials=...
+    Host->>Apache: GET /rhsm/consumers/{uuid}/certificates?serials=... (HTTP/1.1)
+    Apache->>Foreman: Forward certificate download request
     Foreman->>Candlepin: Forward request
     Note right of Candlepin: 249ms
     Candlepin-->>Foreman: Certificates
-    Foreman-->>Host: Certificate data
+    Foreman-->>Apache: Certificate data (7373 bytes)
+    Apache-->>Host: HTTP 200 - Certificate data
 
     loop Content Access Validation
-        Host->>Foreman: GET /rhsm/consumers/{uuid}/accessible_content
+        Host->>Apache: GET /rhsm/consumers/{uuid}/accessible_content (HTTP/1.1)
+        Apache->>Foreman: Forward content access request
         Foreman->>Candlepin: Forward request
         Candlepin-->>Foreman: Content list / 304 Not Modified
-        Foreman-->>Host: Accessible content (6 total calls)
+        Foreman-->>Apache: Accessible content (3808 bytes / 304)
+        Apache-->>Host: HTTP 200/304 - Accessible content (6 total calls)
 
-        Host->>Foreman: GET /rhsm/consumers/{uuid}/content_overrides
+        Host->>Apache: GET /rhsm/consumers/{uuid}/content_overrides (HTTP/1.1)
+        Apache->>Foreman: Forward overrides request
         Foreman->>Candlepin: Forward request
         Candlepin-->>Foreman: Overrides
-        Foreman-->>Host: Content overrides
+        Foreman-->>Apache: Content overrides (2 bytes)
+        Apache-->>Host: HTTP 200 - Content overrides
     end
 
-    Host->>Foreman: GET /rhsm/consumers/{uuid}/release
+    Host->>Apache: GET /rhsm/consumers/{uuid}/release (HTTP/1.1)
+    Apache->>Foreman: Forward release request
     Foreman->>Candlepin: Forward request
     Candlepin-->>Foreman: Release info
-    Foreman-->>Host: Release version
+    Foreman-->>Apache: Release version (19 bytes)
+    Apache-->>Host: HTTP 200 - Release version
 
     loop Excessive Compliance Polling
-        Host->>Foreman: GET /rhsm/consumers/{uuid}/compliance
+        Host->>Apache: GET /rhsm/consumers/{uuid}/compliance (HTTP/1.1)
+        Apache->>Foreman: Forward compliance request
         Foreman->>Candlepin: Forward request
         Candlepin-->>Foreman: Compliance status
-        Foreman-->>Host: Compliance data
+        Foreman-->>Apache: Compliance data (240 bytes)
+        Apache-->>Host: HTTP 200 - Compliance data
         Note over Host,Candlepin: 13 total calls - PERFORMANCE ISSUE
     end
 
     Note over Host,RHCloud: Phase 3: Host Registration
-    Host->>Foreman: POST /register
+    Host->>Apache: POST /register (HTTP/2.0)
+    Apache->>Foreman: Forward registration request
     Note right of Foreman: 267ms - Set host parameters & build mode
     Foreman->>Foreman: Update host build=true
     Foreman->>Foreman: Set parameters
-    Foreman-->>Host: Registration confirmation
+    Foreman-->>Apache: Registration confirmation (5627 bytes)
+    Apache-->>Host: HTTP 200 - Registration confirmation
 
     Note over Host,RHCloud: Phase 4: Package Management
-    Host->>Foreman: PUT /rhsm/consumers/{uuid}/profiles
+    Host->>Apache: PUT /rhsm/consumers/{uuid}/profiles (HTTP/1.1)
+    Apache->>Foreman: Forward profile upload request
     Note right of Foreman: 253ms - Upload package profiles
     Foreman->>Candlepin: Update profiles
     Candlepin-->>Foreman: Profile updated
-    Foreman-->>Host: Success
+    Foreman-->>Apache: Success (16131 bytes)
+    Apache-->>Host: HTTP 200 - Profile updated
 
-    Host->>Pulp: GET /pulp/content/.../repodata/repomd.xml
-    Pulp-->>Host: Repository metadata
-    Host->>Pulp: GET /pulp/content/.../primary.xml.gz
-    Pulp-->>Host: Package data (74MB)
-    Host->>Pulp: GET /pulp/content/.../filelists.xml.gz
-    Pulp-->>Host: File lists (8MB)
-    Host->>Pulp: GET /pulp/content/.../updateinfo.xml.gz
-    Pulp-->>Host: Update info
+    Host->>Apache: GET /pulp/content/.../repodata/repomd.xml (HTTP/2.0)
+    Apache->>Pulp: Forward to Pulp content server
+    Pulp-->>Apache: Repository metadata (4162 bytes)
+    Apache-->>Host: HTTP 200 - Repository metadata
+    Host->>Apache: GET /pulp/content/.../primary.xml.gz (HTTP/2.0)
+    Apache->>Pulp: Forward to Pulp content server
+    Pulp-->>Apache: Package data (74MB)
+    Apache-->>Host: HTTP 200 - Package data (74MB)
+    Host->>Apache: GET /pulp/content/.../filelists.xml.gz (HTTP/2.0)
+    Apache->>Pulp: Forward to Pulp content server
+    Pulp-->>Apache: File lists (8MB)
+    Apache-->>Host: HTTP 200 - File lists (8MB)
+    Host->>Apache: GET /pulp/content/.../updateinfo.xml.gz (HTTP/2.0)
+    Apache->>Pulp: Forward to Pulp content server
+    Pulp-->>Apache: Update info (1.2MB)
+    Apache-->>Host: HTTP 200 - Update info
 
     Note over Host,RHCloud: Phase 5: Insights Integration
     loop Insights Branch Info
-        Host->>Foreman: GET /redhat_access/r/insights/v1/branch_info
+        Host->>Apache: GET /redhat_access/r/insights/v1/branch_info (HTTP/1.1)
+        Apache->>Foreman: Forward Insights request
         Foreman->>RHCloud: Forward to Red Hat Cloud
         RHCloud-->>Foreman: Branch information
-        Foreman-->>Host: Branch info (8 total calls)
+        Foreman-->>Apache: Branch info (1064 bytes)
+        Apache-->>Host: HTTP 200 - Branch info (8 total calls)
     end
 
-    Host->>Foreman: GET /redhat_access/r/insights/platform/module-update-router/v1/channel
+    Host->>Apache: GET /redhat_access/r/insights/platform/module-update-router/v1/channel (HTTP/1.1)
+    Apache->>Foreman: Forward module update request
     Note right of Foreman: 1,028ms - External Red Hat API
     Foreman->>RHCloud: Forward request
     RHCloud-->>Foreman: Module update info
-    Foreman-->>Host: Update channel
+    Foreman-->>Apache: Update channel (18 bytes)
+    Apache-->>Host: HTTP 200 - Update channel
 
-    Host->>Foreman: GET /redhat_access/r/insights/v1/static/release/insights-core.egg
+    Host->>Apache: GET /redhat_access/r/insights/v1/static/release/insights-core.egg (HTTP/1.1)
+    Apache->>Foreman: Forward core download request
     Note right of Foreman: 187ms - Download Insights core
     Foreman->>RHCloud: Forward request
     RHCloud-->>Foreman: Insights core package (1.3MB)
-    Foreman-->>Host: Package data
+    Foreman-->>Apache: Package data (1316124 bytes)
+    Apache-->>Host: HTTP 200 - Package data
 
-    Host->>Foreman: GET /redhat_access/r/insights/v1/static/release/insights-core.egg.asc
+    Host->>Apache: GET /redhat_access/r/insights/v1/static/release/insights-core.egg.asc (HTTP/1.1)
+    Apache->>Foreman: Forward signature request
     Foreman->>RHCloud: Forward request
     RHCloud-->>Foreman: Signature file
-    Foreman-->>Host: Signature
+    Foreman-->>Apache: Signature (801 bytes)
+    Apache-->>Host: HTTP 200 - Signature
 
-    Host->>Foreman: POST /redhat_access/r/insights/v1/systems
+    Host->>Apache: POST /redhat_access/r/insights/v1/systems (HTTP/1.1)
+    Apache->>Foreman: Forward system registration
     Note right of Foreman: 207ms - Register with Insights
     Foreman->>RHCloud: Forward system registration
     RHCloud-->>Foreman: Registration response
-    Foreman-->>Host: Registration confirmation
+    Foreman-->>Apache: Registration confirmation (223 bytes)
+    Apache-->>Host: HTTP 201 - Registration confirmation
 
-    Host->>Foreman: POST /redhat_access/r/insights/uploads/{uuid}
+    Host->>Apache: POST /redhat_access/r/insights/uploads/{uuid} (HTTP/1.1)
+    Apache->>Foreman: Forward data upload
     Note right of Foreman: 232ms - Upload Insights data
     Foreman->>RHCloud: Forward upload
     RHCloud-->>Foreman: Upload confirmation
-    Foreman-->>Host: Upload success
+    Foreman-->>Apache: Upload success (106 bytes)
+    Apache-->>Host: HTTP 201 - Upload success
 
-    Host->>Foreman: GET /redhat_access/r/insights/platform/inventory/v1/hosts
+    Host->>Apache: GET /redhat_access/r/insights/platform/inventory/v1/hosts (HTTP/1.1)
+    Apache->>Foreman: Forward inventory request
     Foreman->>RHCloud: Forward request
     RHCloud-->>Foreman: Host inventory data
-    Foreman-->>Host: Inventory response
+    Foreman-->>Apache: Inventory response (57/1448 bytes)
+    Apache-->>Host: HTTP 200 - Inventory response
 
-    Host->>Foreman: GET /redhat_access/r/insights/platform/insights/v1/system/{id}/reports/
+    Host->>Apache: GET /redhat_access/r/insights/platform/insights/v1/system/{id}/reports/ (HTTP/1.1)
+    Apache->>Foreman: Forward reports request
     Foreman->>RHCloud: Forward request
     RHCloud-->>Foreman: Insights reports
-    Foreman-->>Host: Report data
+    Foreman-->>Apache: Report data (9941 bytes)
+    Apache-->>Host: HTTP 200 - Report data
 
     Note over Host,RHCloud: Phase 6: Final Status Updates
     loop Final Compliance Checks
-        Host->>Foreman: GET /rhsm/consumers/{uuid}/compliance
+        Host->>Apache: GET /rhsm/consumers/{uuid}/compliance (HTTP/1.1)
+        Apache->>Foreman: Forward compliance request
         Foreman->>Candlepin: Forward request
         Candlepin-->>Foreman: Compliance status
-        Foreman-->>Host: Final compliance
+        Foreman-->>Apache: Final compliance (240 bytes)
+        Apache-->>Host: HTTP 200 - Final compliance
     end
 
-    Host->>Foreman: PUT /rhsm/consumers/{uuid} (facts update)
+    Host->>Apache: PUT /rhsm/consumers/{uuid} (facts update) (HTTP/1.1)
+    Apache->>Foreman: Forward facts update
     Note right of Foreman: 765ms - Update facts
     Foreman->>Candlepin: Update consumer facts
     Foreman->>Foreman: Process 201 new facts
     Candlepin-->>Foreman: Facts updated
-    Foreman-->>Host: Update confirmation
+    Foreman-->>Apache: Update confirmation (41 bytes)
+    Apache-->>Host: HTTP 200 - Update confirmation
 
     Note over Host,RHCloud: Phase 7: Build Completion
-    Host->>Foreman: GET /unattended/built?token=...
+    Host->>Apache: GET /unattended/built?token=... (HTTP/1.1)
+    Apache->>Foreman: Forward build completion
     Note right of Foreman: 159ms - Mark build complete
     Foreman->>Foreman: Set build=false, installed_at=now
-    Foreman-->>Host: Build completion confirmed
+    Foreman-->>Apache: Build completion confirmed
+    Apache-->>Host: HTTP 201 - Build completion confirmed
 
     Note over Host,RHCloud: Background: Browser UI Updates
-    Browser->>Foreman: GET /notification_recipients (periodic)
-    Foreman-->>Browser: UI notifications (3 calls during process)
+    Browser->>Apache: GET /notification_recipients (periodic) (HTTP/2.0)
+    Apache->>Foreman: Forward notification request
+    Foreman-->>Apache: UI notifications (1265 bytes)
+    Apache-->>Browser: HTTP 200 - UI notifications (3 calls during process)
 ```
 
 ### Sequence Diagram Summary
@@ -351,19 +408,41 @@ The critical path for registration performance is:
 ## API Call Analysis
 
 ### Total Operations
-- **Total API Calls**: ~70 calls
+- **Total API Calls**: 67 calls (corrected count from Apache logs)
 - **Duration**: ~45 seconds (15:41:19 to 15:42:06)
 - **Primary Backend Services**: Candlepin, Pulp, Red Hat Cloud Services
 
+**Note**: This count reflects unique HTTP requests from Apache access logs, avoiding double-counting between Apache and Foreman application logs.
+
 ### API Call Frequency Analysis
 
-**Most Frequent API Calls:**
-1. **`/rhsm/consumers/{uuid}/compliance`** - **13 calls** (excessive polling for compliance status)
-2. **`/rhsm/status`** - **12 calls** (server status checks)
-3. **`/redhat_access/r/insights/v1/branch_info`** - **8 calls** (Insights client checks)
-4. **`/rhsm/consumers/{uuid}/accessible_content`** - **6 calls** (content access checks)
-5. **`/rhsm/consumers/{uuid}/certificates/serials`** - **6 calls** (certificate serial checks)
-6. **`/rhsm/consumers/{uuid}`** - **5 calls** (consumer details)
+**Complete List of API Calls (by frequency):**
+1. **`GET /rhsm/consumers/{uuid}/compliance`** - **13 calls** (excessive polling for compliance status)
+2. **`GET /rhsm/status`** - **12 calls** (server status checks)
+3. **`GET /redhat_access/r/insights/v1/branch_info`** - **8 calls** (Insights client checks)
+4. **`GET /rhsm/consumers/{uuid}/accessible_content`** - **6 calls** (content access checks)
+5. **`GET /rhsm/consumers/{uuid}/certificates/serials`** - **6 calls** (certificate serial checks)
+6. **`GET /rhsm/consumers/{uuid}/content_overrides`** - **6 calls** (content override checks)
+7. **`GET /pulp/content/.../repodata/repomd.xml`** - **4 calls** (repository metadata)
+8. **`GET /pulp/content/.../repodata/primary.xml.gz`** - **4 calls** (package data - 74MB each)
+9. **`GET /notification_recipients`** - **3 calls** (UI notifications)
+10. **`GET /rhsm/consumers/{uuid}`** - **3 calls** (consumer details)
+11. **`POST /rhsm/consumers`** - **1 call** (consumer creation - 3,256ms)
+12. **`GET /register`** - **1 call** (registration script download - 103ms)
+13. **`GET /rhsm/`** - **1 call** (RHSM resource discovery - 11ms)
+14. **`GET /rhsm/consumers/{uuid}/certificates`** - **1 call** (certificate download - 249ms)
+15. **`GET /rhsm/consumers/{uuid}/release`** - **1 call** (release information - 25ms)
+16. **`POST /register`** - **1 call** (host registration - 267ms)
+17. **`PUT /rhsm/consumers/{uuid}/profiles`** - **1 call** (package profile upload - 253ms)
+18. **`GET /redhat_access/r/insights/platform/module-update-router/v1/channel`** - **1 call** (1,028ms)
+19. **`GET /redhat_access/r/insights/v1/static/release/insights-core.egg`** - **1 call** (187ms, 1.3MB)
+20. **`GET /redhat_access/r/insights/v1/static/release/insights-core.egg.asc`** - **1 call** (86ms)
+21. **`POST /redhat_access/r/insights/v1/systems`** - **1 call** (system registration - 207ms)
+22. **`POST /redhat_access/r/insights/uploads/{uuid}`** - **1 call** (data upload - 232ms)
+23. **`GET /redhat_access/r/insights/platform/inventory/v1/hosts`** - **1 call** (inventory - 143ms)
+24. **`GET /redhat_access/r/insights/platform/insights/v1/system/{id}/reports/`** - **1 call** (reports - 348ms)
+25. **`PUT /rhsm/consumers/{uuid}`** - **1 call** (facts update - 765ms)
+26. **`GET /unattended/built`** - **1 call** (build completion - 159ms)
 
 ### Performance Analysis
 
@@ -376,28 +455,36 @@ The critical path for registration performance is:
 
 ### Backend Service Distribution
 
-**Candlepin Backend Calls (42 calls - 75% of total):**
-- Consumer creation and management
-- Compliance status checking
-- Certificate management
-- Content access validation
-- Facts updates
+**Candlepin Backend Calls (45 calls - 67% of total):**
+- Consumer creation and management: 1 call
+- Compliance status checking: 13 calls (major contributor)
+- Status checks: 12 calls
+- Content access validation: 6 calls
+- Certificate management: 7 calls (serials + download)
+- Content overrides: 6 calls
+- Consumer details: 3 calls
+- Facts updates: 1 call
+- Release information: 1 call
+- RHSM resource discovery: 1 call
 
-**Pulp Backend Calls (8+ calls):**
-- Status checks: 2 calls to `/pulp/api/v3/status/`
-- Content delivery: Multiple requests to `/pulp/content/` for repository metadata
-- Repository data: repomd.xml, primary.xml.gz, filelists.xml.gz, updateinfo.xml.gz
+**Pulp Backend Calls (8 calls - 12% of total):**
+- **Direct content downloads**: `/pulp/content/` for repository metadata
+- **Large transfers**: repomd.xml (4 calls), primary.xml.gz (4 calls, 74MB each)
+- **No status calls**: Pulp content accessed directly, not via API
 
-**Red Hat Cloud Services (11 calls):**
-- Insights API endpoints: 8 calls to `/redhat_access/r/insights/`
+**Red Hat Cloud Services (13 calls - 19% of total):**
+- Insights API endpoints: 8 calls to `/redhat_access/r/insights/v1/branch_info`
 - Module update router: 1 call
-- File uploads: 1 Insights data upload
-- Platform inventory: Host registration and data submission
+- File downloads: 2 calls (core package + signature)
+- System registration: 1 call
+- Data uploads: 1 call
+- Platform inventory: 1 call
+- Reports query: 1 call
 
-**Foreman Core APIs (7 calls):**
-- Registration endpoints: `/register` (GET and POST)
-- Notifications: `/notification_recipients`
-- Build completion: `/unattended/built`
+**Foreman APIs (6 calls - 9% of total):**
+- Registration endpoints: `/register` (GET and POST) - 2 calls
+- Notifications: `/notification_recipients` - 3 calls
+- Build completion: `/unattended/built` - 1 call
 
 ## Performance Bottlenecks Summary
 
