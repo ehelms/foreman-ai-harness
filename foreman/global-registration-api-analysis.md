@@ -408,7 +408,7 @@ The critical path for registration performance is:
 ## API Call Analysis
 
 ### Total Operations
-- **Total API Calls**: 67 calls (corrected count from Apache logs)
+- **Total API Calls**: 69 calls (corrected count from Apache logs)
 - **Duration**: ~45 seconds (15:41:19 to 15:42:06)
 - **Primary Backend Services**: Candlepin, Pulp, Red Hat Cloud Services
 
@@ -423,17 +423,17 @@ The critical path for registration performance is:
 4. **`GET /rhsm/consumers/{uuid}/accessible_content`** - **6 calls** (content access checks)
 5. **`GET /rhsm/consumers/{uuid}/certificates/serials`** - **6 calls** (certificate serial checks)
 6. **`GET /rhsm/consumers/{uuid}/content_overrides`** - **6 calls** (content override checks)
-7. **`GET /pulp/content/.../repodata/repomd.xml`** - **4 calls** (repository metadata)
-8. **`GET /pulp/content/.../repodata/primary.xml.gz`** - **4 calls** (package data - 74MB each)
-9. **`GET /notification_recipients`** - **3 calls** (UI notifications)
-10. **`GET /rhsm/consumers/{uuid}`** - **3 calls** (consumer details)
-11. **`POST /rhsm/consumers`** - **1 call** (consumer creation - 3,256ms)
-12. **`GET /register`** - **1 call** (registration script download - 103ms)
-13. **`GET /rhsm/`** - **1 call** (RHSM resource discovery - 11ms)
-14. **`GET /rhsm/consumers/{uuid}/certificates`** - **1 call** (certificate download - 249ms)
-15. **`GET /rhsm/consumers/{uuid}/release`** - **1 call** (release information - 25ms)
-16. **`POST /register`** - **1 call** (host registration - 267ms)
-17. **`PUT /rhsm/consumers/{uuid}/profiles`** - **1 call** (package profile upload - 253ms)
+7. **`POST /rhsm/consumers`** - **1 call** (consumer creation - 3,256ms)
+8. **`GET /register`** - **1 call** (registration script download - 103ms)
+9. **`GET /rhsm/`** - **1 call** (RHSM resource discovery - 11ms)
+10. **`GET /rhsm/consumers/{uuid}/certificates`** - **1 call** (certificate download - 249ms)
+11. **`GET /rhsm/consumers/{uuid}/release`** - **1 call** (release information - 25ms)
+12. **`POST /register`** - **1 call** (host registration - 267ms)
+13. **`PUT /rhsm/consumers/{uuid}/profiles`** - **1 call** (package profile upload - 253ms)
+14. **`GET /pulp/content/.../repodata/repomd.xml`** - **1 call** (repository metadata)
+15. **`GET /pulp/content/.../repodata/primary.xml.gz`** - **1 call** (package data - 74MB)
+16. **`GET /pulp/content/.../filelists.xml.gz`** - **1 call** (file lists - 8MB)
+17. **`GET /pulp/content/.../updateinfo.xml.gz`** - **1 call** (update info - 1.2MB)
 18. **`GET /redhat_access/r/insights/platform/module-update-router/v1/channel`** - **1 call** (1,028ms)
 19. **`GET /redhat_access/r/insights/v1/static/release/insights-core.egg`** - **1 call** (187ms, 1.3MB)
 20. **`GET /redhat_access/r/insights/v1/static/release/insights-core.egg.asc`** - **1 call** (86ms)
@@ -455,24 +455,19 @@ The critical path for registration performance is:
 
 ### Backend Service Distribution
 
-**Candlepin Backend Calls (45 calls - 67% of total):**
-- Consumer creation and management: 1 call
+**Candlepin Backend Calls (48 calls - 68% of total):**
 - Compliance status checking: 13 calls (major contributor)
 - Status checks: 12 calls
 - Content access validation: 6 calls
 - Certificate management: 7 calls (serials + download)
 - Content overrides: 6 calls
-- Consumer details: 3 calls
+- Consumer creation and management: 1 call
+- Package profile upload: 1 call
 - Facts updates: 1 call
 - Release information: 1 call
 - RHSM resource discovery: 1 call
 
-**Pulp Backend Calls (8 calls - 12% of total):**
-- **Direct content downloads**: `/pulp/content/` for repository metadata
-- **Large transfers**: repomd.xml (4 calls), primary.xml.gz (4 calls, 74MB each)
-- **No status calls**: Pulp content accessed directly, not via API
-
-**Red Hat Cloud Services (13 calls - 19% of total):**
+**Red Hat Cloud Services (14 calls - 20% of total):**
 - Insights API endpoints: 8 calls to `/redhat_access/r/insights/v1/branch_info`
 - Module update router: 1 call
 - File downloads: 2 calls (core package + signature)
@@ -481,9 +476,13 @@ The critical path for registration performance is:
 - Platform inventory: 1 call
 - Reports query: 1 call
 
-**Foreman APIs (6 calls - 9% of total):**
+**Pulp Backend Calls (4 calls - 6% of total):**
+- **Direct content downloads**: `/pulp/content/` for repository metadata
+- **Large transfers**: repomd.xml, primary.xml.gz (74MB), filelists.xml.gz (8MB), updateinfo.xml.gz (1.2MB)
+- **No status calls**: Pulp content accessed directly, not via API
+
+**Foreman APIs (3 calls - 4% of total):**
 - Registration endpoints: `/register` (GET and POST) - 2 calls
-- Notifications: `/notification_recipients` - 3 calls
 - Build completion: `/unattended/built` - 1 call
 
 ## Performance Bottlenecks Summary
