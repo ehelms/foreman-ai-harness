@@ -9,7 +9,7 @@ This is the **foreman-ai-harness** repository - a lola module containing AI agen
 ## Repository Structure
 
 - `foreman-dev-skills/` - Lola module content (skills, agents, instructions)
-  - `foreman-dev-skills/skills/` - AI agent skills for Foreman development workflows
+  - `foreman-dev-skills/skills/` - AI agent skills for Foreman development workflows (prefixed with `foreman-` to avoid collisions)
   - `foreman-dev-skills/agents/` - Subagent definitions
   - `foreman-dev-skills/AGENTS.md` - Module-level instructions installed with skills
 - `docs/` - Reference documentation organized by component
@@ -18,6 +18,13 @@ This is the **foreman-ai-harness** repository - a lola module containing AI agen
   - `docs/katello/` - Katello content management documentation
   - `docs/smart-proxy/` - Smart proxy architecture documentation (overview, development setup, plugin architecture)
   - `docs/iop/` - IoP (Insights-on-Prem) architecture documentation
+
+### Skill Naming Convention
+Skills in this module use a `foreman-` prefix to namespace them within the
+broader AI tooling ecosystem. This avoids collisions with built-in or
+third-party skills that may share the same base name (e.g. `prepare-pr`
+becomes `foreman-prepare-pr`). When adding a new skill, always prefix its
+directory name and frontmatter `name:` field with `foreman-`.
 
 ## Foreman Ecosystem Components
 
