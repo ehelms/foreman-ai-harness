@@ -8,10 +8,10 @@ This is the **foreman-ai-harness** repository - a lola module containing AI agen
 
 ## Repository Structure
 
-- `module/` - Lola module content (skills, agents, instructions)
-  - `module/skills/` - AI agent skills for Foreman development workflows
-  - `module/agents/` - Subagent definitions
-  - `module/AGENTS.md` - Module-level instructions installed with skills
+- `foreman-dev-skills/` - Lola module content (skills, agents, instructions)
+  - `foreman-dev-skills/skills/` - AI agent skills for Foreman development workflows
+  - `foreman-dev-skills/agents/` - Subagent definitions
+  - `foreman-dev-skills/AGENTS.md` - Module-level instructions installed with skills
 - `docs/` - Reference documentation organized by component
   - `docs/foreman/` - Foreman provisioning orchestration design documentation
   - `docs/installer/` - Comprehensive foreman-installer documentation including Kafo framework, container deployment patterns, and installation workflows

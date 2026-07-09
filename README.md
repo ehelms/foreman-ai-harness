@@ -18,36 +18,22 @@ A [lola](https://github.com/LobsterTrap/lola) module for the Foreman community. 
 lola mod add https://github.com/theforeman/foreman-ai-harness.git
 
 # Install to your AI assistant (e.g. Claude Code)
-lola install foreman-ai-harness
+lola install foreman-dev-skills
+
+# Or install to user scope (available across all projects)
+lola install foreman-dev-skills --scope user
 
 # Update to the latest version
-lola mod update foreman-ai-harness
+lola mod update foreman-dev-skills
 ```
 
 ### From a Local Clone
 
 ```bash
 git clone https://github.com/theforeman/foreman-ai-harness.git
-lola mod add ./foreman-ai-harness
-lola install foreman-ai-harness
-```
-
-## Structure
-
-```
-foreman-ai-harness/
-├── README.md              # This file
-├── CLAUDE.md              # Claude Code-specific instructions (for direct repo use)
-├── docs/                  # Reference documentation by component
-│   ├── foreman/           # Foreman core documentation
-│   ├── installer/         # Installer and Kafo framework documentation
-│   ├── katello/           # Katello content management documentation
-│   ├── smart-proxy/       # Smart Proxy architecture documentation
-│   └── iop/               # Insights-on-Prem documentation
-└── module/                # Lola module content
-    ├── AGENTS.md           # Module-level agent instructions
-    ├── skills/             # AI agent skills
-    └── agents/             # Subagent definitions
+cd foreman-ai-harness
+lola mod add foreman-dev-skills
+lola install foreman-dev-skills
 ```
 
 ## Contributing
@@ -58,4 +44,4 @@ Contributions are welcome for:
 - Adding specialized agent definitions
 - Expanding architecture and design documentation
 - Adding development references for Foreman ecosystem projects
-- Improving agent instructions in `module/AGENTS.md`
+- Improving agent instructions in `foreman-dev-skills/AGENTS.md`
